@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 60px auto;
+            padding: 20px;
+            background: #f4f6f8;
+        }
+
+        h1 { text-align: center; }
+
+        form {
+            display: flex;
+            gap: 8px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        li {
+            background: white;
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>My Task Manager</h1>
+
+    <form id="task-form">
+        <input id="title" placeholder="Enter a task" required>
+        <button type="submit">Add</button>
+    </form>
+
+    <ul id="tasks"></ul>
+
+    <script>
+        const taskList = document.getElementById("tasks");
+        const form = document.getElementById("task-form");
+        const input = document.getElementById("title");
+
+        async function loadTasks() {
+            const response = await fetch("/api/tasks");
+            const tasks = await response.json();
+
+            taskList.replaceChildren();
+
+            tasks.forEach(task => {
+                const item = document.createElement("li");
+                item.textContent = task.title;
+                taskList.appendChild(item);
+            });
+        }
+
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+
+            const response = await fetch("/api/tasks", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({title: input.value})
+            });
+
+            if (response.ok) {
+                input.value = "";
+                await loadTasks();
+            } else {
+                alert("Could not add task.");
+            }
+        });
+
+        loadTasks();
+    </script>
+</body>
+</html>
