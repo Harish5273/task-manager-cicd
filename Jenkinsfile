@@ -23,5 +23,11 @@ pipeline {
                 sh '.venv/bin/pytest -v'
             }
         }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t task-manager-cicd:${BUILD_NUMBER} .'
+            }
+        }
     }
 }
