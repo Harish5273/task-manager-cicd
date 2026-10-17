@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -26,8 +27,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t harish5273/task-manager-cicd:${BUILD_NUMBER} .'
-                sh 'docker tag harish5273/task-manager-cicd:${BUILD_NUMBER} harish5273/task-manager-cicd:latest'
+                sh '''
+                    docker build -t harish5273/task-manager-cicd:${BUILD_NUMBER} .
+                    docker tag harish5273/task-manager-cicd:${BUILD_NUMBER} harish5273/task-manager-cicd:latest
+                '''
             }
         }
 
@@ -48,5 +51,23 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    set -eu
+
+                    export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+                    kubectl set image deployment/task-manager-app \
+                        app=harish5273/task-manager-cicd:${BUILD_NUMBER} \
+                        -n task-manager
+
+                    kubectl rollout status deployment/task-manager-app \
+                        -n task-manager \
+                        --timeout=180s
+                '''
+            }
+        }
     }
-}    
+}
