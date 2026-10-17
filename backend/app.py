@@ -2,10 +2,9 @@ import os
 import psycopg
 from flask import Flask, jsonify, render_template, request
 
-app = Flask(
-    __name__,
-    template_folder="../templates"
-)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates") if os.path.basename(os.path.dirname(__file__)) == "backend" else os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+app = Flask(__name__, template_folder=TEMPLATE_DIR)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
