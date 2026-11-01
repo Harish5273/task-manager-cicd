@@ -58,16 +58,19 @@ pipeline {
                 script {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                         sh '''
-                            # 1. Download the current Task Definition JSON from AWS
+                            # 1. Download the current Task Definition
                             aws ecs describe-task-definition --task-definition ${TASK_FAMILY} --region ${AWS_REGION} > task-def.json
                             
-                            # 2. Use 'sed' to replace the old image tag with the new BUILD_NUMBER in ECR
-                            sed -i 's|"image": ".*"|"image": "'${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}'"|g' task-def.json
+                            # 2. Use 'jq' to extract the inner object and remove read-only AWS fields
+                            jq '.taskDefinition | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-def.json > clean-task-def.json
                             
-                            # 3. Register the new Task Definition revision and save the new ARN
-                            NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://task-def.json --region ${AWS_REGION} --query 'taskDefinition.taskDefinitionArn' --output text)
+                            # 3. Update the image tag in the CLEAN JSON file
+                            sed -i 's|"image": ".*"|"image": "'${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}'"|g' clean-task-def.json
                             
-                            # 4. Update the ECS Service to use this new Task Definition
+                            # 4. Register the new Task Definition using the clean file
+                            NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://clean-task-def.json --region ${AWS_REGION} --query 'taskDefinition.taskDefinitionArn' --output text)
+                            
+                            # 5. Update the ECS Service to use the new revision
                             aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --task-definition ${NEW_TASK_DEF_ARN} --region ${AWS_REGION}
                         '''
                     }
@@ -76,3 +79,4 @@ pipeline {
         }
     }
 }
+        
